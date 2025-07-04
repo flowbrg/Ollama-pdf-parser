@@ -1,4 +1,4 @@
-# PDF to Markdown Pipeline - Complete Implementation
+# PDF to Markdown Pipeline
 
 ## Project Overview
 
