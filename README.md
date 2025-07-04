@@ -153,4 +153,3 @@ formula_result = vision_processor.extract_formulas(page_image)
 - **Streaming**: Process pages as they're ready
 - **Preprocessing**: Optimize images before vision processing
 
-This pipeline provides a solid foundation for high-quality PDF to Markdown conversion while maintaining flexibility for diverse use cases and document types.
