@@ -1,10 +1,10 @@
 # PDF to Markdown Pipeline - Complete Implementation
 
-## 🎯 Project Overview
+## Project Overview
 
 We've built a sophisticated, high-fidelity PDF to Markdown conversion pipeline that preserves mathematical formulas, schemas, diagrams, and complex layouts using LangChain's ChatOllama integration.
 
-## 🏗️ Architecture
+## Architecture
 
 ### Core Components
 
@@ -50,7 +50,7 @@ We've built a sophisticated, high-fidelity PDF to Markdown conversion pipeline t
    - Error handling and recovery
    - Result serialization
 
-## 🚀 Key Features
+## Key Features
 
 ### Intelligence
 - **Adaptive Strategy**: Automatically chooses optimal processing method per page
@@ -69,7 +69,7 @@ We've built a sophisticated, high-fidelity PDF to Markdown conversion pipeline t
 - **Processing Options**: Text-only, vision-only, or hybrid modes
 - **Output Formats**: Individual pages or combined documents
 
-## 📋 Usage Examples
+## Usage Examples
 
 ### Simple Conversion
 ```python
@@ -118,22 +118,7 @@ formula_result = vision_processor.extract_formulas(page_image)
 - **HYBRID**: Combines text + vision for optimal results
 - **COMPLEX_LAYOUT**: Vision-first for complex layouts
 
-## 📊 Performance Characteristics
-
-### Strengths
-- ✅ High fidelity for mathematical content
-- ✅ Intelligent strategy selection
-- ✅ Robust error handling
-- ✅ Configurable for different use cases
-- ✅ Preserves document structure
-
-### Considerations
-- ⚠️ Vision processing adds latency
-- ⚠️ Requires Ollama server with vision models
-- ⚠️ Large documents may need batch processing
-- ⚠️ Quality depends on vision model capabilities
-
-## 🛠️ Dependencies
+## Dependencies
 
 ### Required
 - `PyMuPDF` (fitz): PDF processing
@@ -145,7 +130,7 @@ formula_result = vision_processor.extract_formulas(page_image)
 - `tqdm`: Progress bars
 - `tenacity`: Retry logic
 
-## 🚦 Getting Started
+## Getting Started
 
 1. **Install Ollama** and pull a vision model:
    ```bash
@@ -164,7 +149,7 @@ formula_result = vision_processor.extract_formulas(page_image)
    result = convert_pdf_to_markdown("your_document.pdf")
    ```
 
-## 🎯 Next Steps
+## Next Steps
 
 ### Potential Enhancements
 - **Concurrent Processing**: Parallel page processing
