@@ -52,19 +52,9 @@ We've built a sophisticated, high-fidelity PDF to Markdown conversion pipeline t
 
 ## Key Features
 
-### Intelligence
 - **Adaptive Strategy**: Automatically chooses optimal processing method per page
 - **Content-Aware**: Detects tables, formulas, diagrams, and complex layouts
-- **Quality-First**: Prioritizes text extraction when possible, vision when necessary
-
-### Fidelity
-- **Mathematical Formulas**: Preserves LaTeX notation
-- **Table Structure**: Maintains column alignment and formatting
-- **Document Flow**: Preserves logical reading order
-- **Visual Elements**: Detailed diagram descriptions
-
-### Flexibility
-- **Configurable Models**: Any Ollama vision model
+- **Mathematical Formulas**: Tries to preserve as LaTeX notation
 - **Custom Base URL**: Remote Ollama servers supported
 - **Processing Options**: Text-only, vision-only, or hybrid modes
 - **Output Formats**: Individual pages or combined documents
@@ -103,7 +93,7 @@ table_result = vision_processor.extract_table_data(page_image)
 formula_result = vision_processor.extract_formulas(page_image)
 ```
 
-## 🔧 Configuration Options
+## Configuration Options
 
 ### PipelineConfig
 - `dpi`: Image resolution (default: 300)
