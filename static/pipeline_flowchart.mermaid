@@ -1,0 +1,51 @@
+graph TD
+    A[PDF Input] --> B[PDFAnalyzer]
+    B --> C{Strategy Decision}
+    
+    C -->|TEXT_ONLY| D[TextExtractor]
+    C -->|VISION_ONLY| E[VisionProcessor]
+    C -->|HYBRID| F[Both Extractors]
+    C -->|COMPLEX_LAYOUT| G[Vision-First Processing]
+    
+    D --> H[Raw Text + Formatting]
+    E --> I[Vision Results]
+    F --> J[Text Content]
+    F --> K[Vision Content]
+    G --> L[Complex Vision Results]
+    
+    H --> M[ContentIntegrator]
+    I --> M
+    J --> M
+    K --> M
+    L --> M
+    
+    M --> N[Merged Content Elements]
+    N --> O[MarkdownGenerator]
+    O --> P[Final Markdown]
+    
+    subgraph "Analysis Phase"
+        B
+        C
+    end
+    
+    subgraph "Extraction Phase"
+        D
+        E
+        F
+        G
+    end
+    
+    subgraph "Integration Phase"
+        M
+        N
+    end
+    
+    subgraph "Generation Phase"
+        O
+        P
+    end
+    
+    style A fill:#e1f5fe
+    style P fill:#c8e6c9
+    style C fill:#fff3e0
+    style M fill:#f3e5f5
