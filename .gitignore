@@ -1,3 +1,5 @@
 /.venv
 /sample_document.pdf
 /output
+/logs
+__pycache__

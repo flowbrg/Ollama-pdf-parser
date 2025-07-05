@@ -51,7 +51,7 @@ class ContentIntegrator:
             elements = text_elements
         elif strategy == "VISION_ONLY":
             elements = vision_elements
-        else:  # HYBRID or COMPLEX_LAYOUT
+        else:  # HYBRID
             elements = self._merge_hybrid_content(text_elements, vision_elements)
         
         # Resolve conflicts and overlaps

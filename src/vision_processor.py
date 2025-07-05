@@ -3,6 +3,7 @@ from langchain_core.messages import HumanMessage
 from typing import Dict, List, Optional, Tuple
 import json
 from dataclasses import dataclass
+from src.logger_config import get_logger
 
 @dataclass
 class VisionResult:
@@ -16,6 +17,7 @@ class VisionProcessor:
     """Use ChatOllama for complex content (diagrams, tables, handwritten)"""
     
     def __init__(self, model_name: str, base_url: str, temperature: float = 0.1):
+        self.logger = get_logger(__name__)
         self.model_name = model_name
         self.base_url = base_url
         self.temperature = temperature
@@ -28,6 +30,8 @@ class VisionProcessor:
             "formula": self._get_formula_prompt(),
             "general": self._get_general_prompt()
         }
+        
+        self.logger.info(f"VisionProcessor initialized with model: {model_name}")
     
     def _init_ollama(self, model_name: str, base_url: str) -> ChatOllama:
         """Initialize ChatOllama with custom base_url"""
@@ -37,13 +41,17 @@ class VisionProcessor:
                 base_url=base_url,
                 temperature=self.temperature
             )
+            self.logger.info(f"Connected to Ollama at {base_url}")
             return chat_model
         except Exception as e:
+            self.logger.error(f"Failed to initialize ChatOllama: {e}")
             raise ConnectionError(f"Failed to initialize ChatOllama: {e}")
     
     def process_image_content(self, image_base64: str, content_type: str = "general", 
                             context: str = "") -> VisionResult:
         """Process images/diagrams with context-aware prompts"""
+        
+        self.logger.debug(f"Processing image content with type: {content_type}")
         
         prompt = self.prompts.get(content_type, self.prompts["general"])
         if context:
@@ -58,6 +66,8 @@ class VisionProcessor:
             message = HumanMessage(content=content)
             response = self.chat_model.invoke([message])
             
+            self.logger.debug(f"Vision model response received, length: {len(response.content)}")
+            
             return VisionResult(
                 content=response.content,
                 content_type=content_type,
@@ -66,19 +76,23 @@ class VisionProcessor:
             )
             
         except Exception as e:
+            self.logger.error(f"Vision processing failed: {e}")
             raise RuntimeError(f"Vision processing failed: {e}")
     
     def extract_table_data(self, image_base64: str) -> VisionResult:
         """Extract tables with structure preservation"""
+        self.logger.debug("Extracting table data from image")
         return self.process_image_content(image_base64, "table")
     
     def describe_diagrams(self, image_base64: str, diagram_type: str = "") -> VisionResult:
         """Generate detailed diagram descriptions"""
+        self.logger.debug(f"Describing diagram: {diagram_type}")
         context = f"This appears to be a {diagram_type} diagram." if diagram_type else ""
         return self.process_image_content(image_base64, "diagram", context)
     
     def extract_formulas(self, image_base64: str) -> VisionResult:
         """Extract mathematical formulas in LaTeX format"""
+        self.logger.debug("Extracting formulas from image")
         return self.process_image_content(image_base64, "formula")
     
     def _get_table_prompt(self) -> str:
@@ -139,13 +153,17 @@ Provide complete, accurate extraction maintaining the original meaning and struc
 
     def batch_process(self, images_data: List[Tuple[str, str]]) -> List[VisionResult]:
         """Process multiple images with their content types"""
+        self.logger.info(f"Batch processing {len(images_data)} images")
         results = []
-        for image_base64, content_type in images_data:
+        
+        for i, (image_base64, content_type) in enumerate(images_data):
             try:
+                self.logger.debug(f"Processing image {i+1}/{len(images_data)} of type {content_type}")
                 result = self.process_image_content(image_base64, content_type)
                 results.append(result)
             except Exception as e:
                 # Continue processing other images even if one fails
+                self.logger.warning(f"Failed to process image {i+1}: {e}")
                 error_result = VisionResult(
                     content=f"Error processing image: {e}",
                     content_type=content_type,

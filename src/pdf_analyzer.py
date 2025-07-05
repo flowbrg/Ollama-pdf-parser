@@ -3,12 +3,12 @@ import re
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 from enum import Enum
+from src.logger_config import get_logger
 
 class ProcessingStrategy(Enum):
     TEXT_ONLY = "text_only"           # Pure text extraction
     VISION_ONLY = "vision_only"       # Vision model for everything
     HYBRID = "hybrid"                 # Combine text + vision
-    COMPLEX_LAYOUT = "complex_layout" # Vision-first for complex layouts
 
 @dataclass
 class PageAnalysis:
@@ -18,7 +18,6 @@ class PageAnalysis:
     has_images: bool
     has_tables: bool
     has_formulas: bool
-    layout_complexity: float  # 0.0 to 1.0
     strategy: ProcessingStrategy
     confidence: float
     metadata: Dict
@@ -27,6 +26,7 @@ class PDFAnalyzer:
     """Analyze PDF structure to determine optimal processing strategy"""
     
     def __init__(self):
+        self.logger = get_logger(__name__)
         self.text_threshold = 0.7      # Minimum text coverage for text-only
         self.complexity_threshold = 0.6 # Threshold for complex layout detection
         
@@ -35,20 +35,22 @@ class PDFAnalyzer:
         
         # Check text extractability
         has_text = self._has_extractable_text(page)
+        self.logger.debug(f"Has text:{has_text}")
         text_coverage = self._calculate_text_coverage(page)
-        
+        self.logger.debug(f"Text_coverage:{text_coverage}")
+
         # Detect content types
         has_images = self._detect_images(page)
+        self.logger.debug(f"Has images:{has_images}")
         has_tables = self._detect_tables(page)
+        self.logger.debug(f"Has tables:{has_tables}")
         has_formulas = self._detect_formulas(page)
-        
-        # Calculate layout complexity
-        complexity = self._calculate_layout_complexity(page)
-        
+        self.logger.debug(f"Has formulas:{has_formulas}")
+                          
         # Determine strategy
         strategy, confidence = self._determine_strategy(
             has_text, text_coverage, has_images, has_tables, 
-            has_formulas, complexity
+            has_formulas
         )
         
         return PageAnalysis(
@@ -57,7 +59,6 @@ class PDFAnalyzer:
             has_images=has_images,
             has_tables=has_tables,
             has_formulas=has_formulas,
-            layout_complexity=complexity,
             strategy=strategy,
             confidence=confidence,
             metadata={
@@ -74,14 +75,13 @@ class PDFAnalyzer:
     
     def analyze_document(self, pdf_path: str) -> Dict[int, PageAnalysis]:
         """Analyze entire PDF document"""
-        doc = fitz.open(pdf_path)
-        analyses = {}
+        with fitz.open(pdf_path) as doc:
+            analyses = {}
+            
+            for page_num in range(doc.page_count):
+                page = doc[page_num]
+                analyses[page_num] = self.analyze_page_content(page)
         
-        for page_num in range(doc.page_count):
-            page = doc[page_num]
-            analyses[page_num] = self.analyze_page_content(page)
-        
-        doc.close()
         return analyses
     
     def _has_extractable_text(self, page: fitz.Page) -> bool:
@@ -170,85 +170,19 @@ class PDFAnalyzer:
         
         return any(re.search(pattern, text) for pattern in math_indicators)
     
-    def _calculate_layout_complexity(self, page: fitz.Page) -> float:
-        """Calculate layout complexity score (0.0 to 1.0)"""
-        text_dict = page.get_text("dict")
-        
-        complexity_factors = {
-            "column_count": 0,
-            "font_variety": 0,
-            "size_variety": 0,
-            "position_scatter": 0,
-            "block_count": 0
-        }
-        
-        # Analyze text blocks
-        fonts = set()
-        sizes = set()
-        x_positions = []
-        
-        text_blocks = [b for b in text_dict["blocks"] if "lines" in b]
-        complexity_factors["block_count"] = len(text_blocks)
-        
-        for block in text_blocks:
-            for line in block["lines"]:
-                for span in line["spans"]:
-                    fonts.add(span["font"])
-                    sizes.add(span["size"])
-                    x_positions.append(span["bbox"][0])
-        
-        # Font variety (normalized)
-        complexity_factors["font_variety"] = min(len(fonts) / 5, 1.0)
-        
-        # Size variety (normalized)
-        complexity_factors["size_variety"] = min(len(sizes) / 5, 1.0)
-        
-        # Column detection
-        if x_positions:
-            unique_x = len(set(round(x) for x in x_positions))
-            complexity_factors["column_count"] = min(unique_x / 5, 1.0)
-        
-        # Position scatter (how spread out text is)
-        if len(x_positions) > 1:
-            x_range = max(x_positions) - min(x_positions)
-            page_width = page.rect.width
-            complexity_factors["position_scatter"] = min(x_range / page_width, 1.0)
-        
-        # Weighted average
-        weights = {
-            "column_count": 0.3,
-            "font_variety": 0.2,
-            "size_variety": 0.2,
-            "position_scatter": 0.2,
-            "block_count": 0.1
-        }
-        
-        # Normalize block count
-        complexity_factors["block_count"] = min(complexity_factors["block_count"] / 10, 1.0)
-        
-        complexity = sum(weights[k] * complexity_factors[k] for k in weights)
-        return min(complexity, 1.0)
-    
     def _determine_strategy(self, has_text: bool, text_coverage: float, 
                           has_images: bool, has_tables: bool, 
-                          has_formulas: bool, complexity: float) -> Tuple[ProcessingStrategy, float]:
+                          has_formulas: bool) -> Tuple[ProcessingStrategy, float]:
         """Determine optimal processing strategy with confidence"""
         
         # High confidence text-only conditions
         if (has_text and text_coverage > self.text_threshold and 
-            not has_images and not has_tables and 
-            complexity < 0.4):
+            not has_images and not has_tables):
             return ProcessingStrategy.TEXT_ONLY, 0.9
         
         # Vision-only conditions
-        if (not has_text or text_coverage < 0.3 or 
-            complexity > 0.8):
+        if (not has_text or text_coverage < 0.1):
             return ProcessingStrategy.VISION_ONLY, 0.8
-        
-        # Complex layout conditions
-        if (complexity > self.complexity_threshold and 
-            (has_tables or has_images)):
-            return ProcessingStrategy.COMPLEX_LAYOUT, 0.7
         
         # Default to hybrid for mixed content
         confidence = 0.6

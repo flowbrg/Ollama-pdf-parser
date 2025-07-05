@@ -69,7 +69,6 @@ saved_files = pipeline.save_results(result, "./output")
 - **TEXT_ONLY**: Direct text extraction for simple documents
 - **VISION_ONLY**: Vision model for scanned/complex documents  
 - **HYBRID**: Combines text + vision for optimal results
-- **COMPLEX_LAYOUT**: Vision-first for complex layouts
 
 ## API Reference
 

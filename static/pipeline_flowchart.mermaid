@@ -5,7 +5,6 @@ graph TD
     C -->|TEXT_ONLY| D[TextExtractor]
     C -->|VISION_ONLY| E[VisionProcessor]
     C -->|HYBRID| F[Both Extractors]
-    C -->|COMPLEX_LAYOUT| G[Vision-First Processing]
     
     D --> H[Raw Text + Formatting]
     E --> I[Vision Results]

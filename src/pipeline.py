@@ -4,12 +4,13 @@ from typing import List, Dict, Optional
 from dataclasses import dataclass
 
 # Import all our components
-from .utils import Utils, PipelineConfig
-from .pdf_analyzer import PDFAnalyzer, PageAnalysis
-from .text_extractor import TextExtractor
-from .vision_processor import VisionProcessor
-from .content_integrator import ContentIntegrator
-from .markdown_generator import MarkdownGenerator
+from src.utils import Utils, PipelineConfig
+from src.pdf_analyzer import PDFAnalyzer, PageAnalysis
+from src.text_extractor import TextExtractor
+from src.vision_processor import VisionProcessor
+from src.content_integrator import ContentIntegrator
+from src.markdown_generator import MarkdownGenerator
+from src.logger_config import setup_logging, get_logger
 
 @dataclass
 class ConversionResult:
@@ -24,6 +25,7 @@ class PDFToMarkdownPipeline:
     
     def __init__(self, ollama_model: str, ollama_base_url: str, config: Optional[PipelineConfig] = None):
         """Initialize the pipeline with all components"""
+        self.logger = get_logger(__name__)
         self.config = config or PipelineConfig()
         
         # Initialize all components
@@ -57,29 +59,28 @@ class PDFToMarkdownPipeline:
                 )
             
             # Open PDF document
-            doc = fitz.open(str(pdf_path))
-            pages_markdown = []
-            page_analyses = []
-            errors = []
-            
-            print(f"Processing PDF with {doc.page_count} pages...")
-            
-            for page_num in range(doc.page_count):
-                try:
-                    page = doc[page_num]
-                    print(f"Processing page {page_num + 1}/{doc.page_count}")
-                    
-                    # Convert single page
-                    page_markdown = self.convert_page(page)
-                    pages_markdown.append(page_markdown)
-                    
-                except Exception as e:
-                    error_msg = f"Error processing page {page_num + 1}: {str(e)}"
-                    errors.append(error_msg)
-                    print(f"Warning: {error_msg}")
-                    pages_markdown.append(f"<!-- Error processing page {page_num + 1}: {str(e)} -->")
-            
-            doc.close()
+            with fitz.open(str(pdf_path)) as doc:
+                pages_markdown = []
+                page_analyses = []
+                errors = []
+                
+                self.logger.info(f"Processing PDF with {doc.page_count} pages...")
+                
+                for page_num in range(doc.page_count):
+                    try:
+                        page = doc[page_num]
+                        self.logger.info(f"Processing page {page_num + 1}/{doc.page_count}")
+                        
+                        # Convert single page
+                        page_markdown = self.convert_page(page)
+                        pages_markdown.append(page_markdown)
+                        
+                    except Exception as e:
+                        error_msg = f"Error processing page {page_num + 1}: {str(e)}"
+                        errors.append(error_msg)
+                        self.logger.warning(f"Warning: {error_msg}")
+                        pages_markdown.append(f"<!-- Error processing page {page_num + 1}: {str(e)} -->")
+
             
             # Compile metadata
             result_metadata = {
@@ -109,31 +110,31 @@ class PDFToMarkdownPipeline:
         """Process single page through pipeline"""
         
         # 1. Analyze PDF page structure
-        print(f"  Analyzing page structure...")
+        self.logger.info(f"  Analyzing page structure...")
         analysis = self.analyzer.analyze_page_content(page)
         strategy = analysis.strategy.value
-        print(f"  Strategy: {strategy} (confidence: {analysis.confidence:.2f})")
+        self.logger.info(f"  Strategy: {strategy} (confidence: {analysis.confidence:.2f})")
         
         # 2. Extract content based on strategy
         text_content = None
         vision_content = []
         
         if strategy in ["text_only", "hybrid"]:
-            print(f"  Extracting text content...")
+            self.logger.info(f"  Extracting text content...")
             text_content = self._extract_text_content(page, analysis)
         
-        if strategy in ["vision_only", "hybrid", "complex_layout"]:
-            print(f"  Processing with vision model...")
+        if strategy in ["vision_only", "hybrid"]:
+            self.logger.info(f"  Processing with vision model...")
             vision_content = self._process_with_vision(page, analysis)
         
         # 3. Integrate content streams
-        print(f"  Integrating content...")
+        self.logger.info(f"  Integrating content...")
         integrated_content = self.integrator.merge_content_streams(
             text_content, vision_content, strategy
         )
         
         # 4. Generate final markdown
-        print(f"  Generating markdown...")
+        self.logger.info(f"  Generating markdown...")
         markdown = integrated_content.markdown
         
         return markdown
@@ -155,7 +156,7 @@ class PDFToMarkdownPipeline:
                 return page.get_text()
                 
         except Exception as e:
-            print(f"    Text extraction failed: {e}")
+            self.logger.info(f"    Text extraction failed: {e}")
             return page.get_text()  # Fallback
     
     def _process_with_vision(self, page: fitz.Page, analysis: PageAnalysis) -> List:
@@ -168,28 +169,28 @@ class PDFToMarkdownPipeline:
             
             # Determine what type of content to extract
             if analysis.has_tables:
-                print(f"    Extracting tables...")
+                self.logger.info(f"    Extracting tables...")
                 table_result = self.vision_processor.extract_table_data(page_image)
                 vision_results.append(table_result)
             
             if analysis.has_formulas:
-                print(f"    Extracting formulas...")
+                self.logger.info(f"    Extracting formulas...")
                 formula_result = self.vision_processor.extract_formulas(page_image)
                 vision_results.append(formula_result)
             
             if analysis.has_images:
-                print(f"    Describing diagrams...")
+                self.logger.info(f"    Describing diagrams...")
                 diagram_result = self.vision_processor.describe_diagrams(page_image)
                 vision_results.append(diagram_result)
             
             # If no specific content detected, use general extraction
             if not vision_results:
-                print(f"    General content extraction...")
+                self.logger.info(f"    General content extraction...")
                 general_result = self.vision_processor.process_image_content(page_image, "general")
                 vision_results.append(general_result)
                 
         except Exception as e:
-            print(f"    Vision processing failed: {e}")
+            self.logger.info(f"    Vision processing failed: {e}")
             # Return empty results rather than failing completely
             vision_results = []
         
@@ -197,6 +198,8 @@ class PDFToMarkdownPipeline:
     
     def save_results(self, result: ConversionResult, output_dir: str = "./output") -> List[Path]:
         """Save conversion results to files"""
+        self.logger.info(f"Saving results to {output_dir}")
+        
         output_path = Path(output_dir)
         output_path.mkdir(exist_ok=True)
         
@@ -207,12 +210,14 @@ class PDFToMarkdownPipeline:
             page_file = output_path / f"page_{i+1:03d}.md"
             page_file.write_text(page_content, encoding='utf-8')
             saved_files.append(page_file)
+            self.logger.debug(f"Saved page {i+1} to {page_file}")
         
         # Save combined document
         combined_content = "\n\n---\n\n".join(result.pages)
         combined_file = output_path / "combined_document.md"
         combined_file.write_text(combined_content, encoding='utf-8')
         saved_files.append(combined_file)
+        self.logger.debug(f"Saved combined document to {combined_file}")
         
         # Save metadata
         import json
@@ -224,6 +229,9 @@ class PDFToMarkdownPipeline:
         with open(metadata_file, 'w') as f:
             json.dump(serializable_metadata, f, indent=2)
         saved_files.append(metadata_file)
+        self.logger.debug(f"Saved metadata to {metadata_file}")
+        
+        self.logger.info(f"Successfully saved {len(saved_files)} files to {output_dir}")
         
         return saved_files
     
@@ -259,9 +267,11 @@ class PDFToMarkdownPipeline:
 
 
 # Convenience function for simple usage
-def convert_pdf_to_markdown(pdf_path: str, ollama_model: str = "llama3.2-vision:11b", 
-                          ollama_base_url: str = "http://localhost:11434",
-                          output_dir: str = "./output") -> ConversionResult:
+def convert_pdf_to_markdown(pdf_path: str,
+                            ollama_model: str = "llama3.2-vision:11b", 
+                            ollama_base_url: str = "http://localhost:11434",
+                            output_dir: str = "./output",
+                            log_level: str = "INFO") -> ConversionResult:
     """
     Simple function to convert a PDF to markdown with default settings
     
@@ -270,10 +280,14 @@ def convert_pdf_to_markdown(pdf_path: str, ollama_model: str = "llama3.2-vision:
         ollama_model: Ollama model name for vision processing
         ollama_base_url: Ollama server URL
         output_dir: Directory to save output files
+        log_level: Logging level (DEBUG, INFO, WARNING, ERROR)
     
     Returns:
         ConversionResult with pages and metadata
     """
+    # Set up logging
+    logger = setup_logging(log_level=log_level)
+    
     pipeline = PDFToMarkdownPipeline(ollama_model, ollama_base_url)
     result = pipeline.convert_pdf(pdf_path)
     

@@ -106,7 +106,6 @@ formula_result = vision_processor.extract_formulas(page_image)
 - **TEXT_ONLY**: Pure text extraction for simple documents
 - **VISION_ONLY**: Vision model for scanned/complex documents
 - **HYBRID**: Combines text + vision for optimal results
-- **COMPLEX_LAYOUT**: Vision-first for complex layouts
 
 ## Dependencies
 

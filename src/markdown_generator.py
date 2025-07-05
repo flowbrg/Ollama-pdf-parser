@@ -2,6 +2,7 @@ import re
 import base64
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
+from src.logger_config import get_logger
 
 @dataclass
 class ImageReference:
@@ -14,12 +15,16 @@ class MarkdownGenerator:
     """Generate high-fidelity markdown output"""
     
     def __init__(self, config):
+        self.logger = get_logger(__name__)
         self.config = config
         self.image_counter = 0
         self.embedded_images = []
+        
+        self.logger.debug(f"MarkdownGenerator initialized with config: {config.__dict__}")
     
     def format_mathematical_content(self, formulas: List[str]) -> str:
         """Convert to LaTeX notation in markdown"""
+        self.logger.debug(f"Formatting {len(formulas)} mathematical formulas")
         formatted_formulas = []
         
         for formula in formulas:
@@ -39,10 +44,12 @@ class MarkdownGenerator:
             
             formatted_formulas.append(formula)
         
+        self.logger.debug(f"Formatted {len(formatted_formulas)} formulas")
         return '\n\n'.join(formatted_formulas)
     
     def structure_tables(self, table_data: List[str]) -> str:
         """Create properly formatted markdown tables"""
+        self.logger.debug(f"Structuring {len(table_data)} tables")
         formatted_tables = []
         
         for table in table_data:
@@ -50,10 +57,12 @@ class MarkdownGenerator:
             if formatted_table:
                 formatted_tables.append(formatted_table)
         
+        self.logger.debug(f"Structured {len(formatted_tables)} tables")
         return '\n\n'.join(formatted_tables)
     
     def embed_images(self, images: List[Dict], mode: str = "base64") -> str:
         """Handle image embedding (base64/file refs)"""
+        self.logger.debug(f"Embedding {len(images)} images in {mode} mode")
         image_markdown = []
         
         for img_data in images:
@@ -65,10 +74,12 @@ class MarkdownGenerator:
             if markdown:
                 image_markdown.append(markdown)
         
+        self.logger.debug(f"Embedded {len(image_markdown)} images")
         return '\n\n'.join(image_markdown)
     
     def generate_final_markdown(self, processed_content: Dict) -> str:
         """Combine all elements into coherent markdown"""
+        self.logger.debug("Generating final markdown from processed content")
         sections = []
         
         # Add title if available
@@ -96,6 +107,8 @@ class MarkdownGenerator:
         
         # Post-process for cleanup
         markdown = self._clean_markdown(markdown)
+        
+        self.logger.info(f"Generated final markdown: {len(markdown)} characters")
         
         return markdown
     
@@ -204,7 +217,7 @@ class MarkdownGenerator:
             with open(filename, 'wb') as f:
                 f.write(image_data)
         except Exception as e:
-            print(f"Warning: Could not save image {filename}: {e}")
+            self.logger.warning(f"Could not save image {filename}: {e}")
     
     def _format_text_content(self, text_content: str) -> str:
         """Format regular text content with proper markdown"""
