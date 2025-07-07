@@ -4,6 +4,8 @@
 
 We've built a sophisticated, high-fidelity PDF to Markdown conversion pipeline that preserves mathematical formulas, schemas, diagrams, and complex layouts using LangChain's ChatOllama integration.
 
+<span style="color: red;">HYBRID PARSER NOT WORKING PROPERLY</span>
+
 ## Architecture
 
 ### Core Components
@@ -109,15 +111,10 @@ formula_result = vision_processor.extract_formulas(page_image)
 
 ## Dependencies
 
-### Required
 - `PyMuPDF` (fitz): PDF processing
 - `langchain-ollama`: LangChain Ollama integration
 - `PIL` (Pillow): Image processing
 - `pydantic`: Data validation
-
-### Optional
-- `tqdm`: Progress bars
-- `tenacity`: Retry logic
 
 ## Getting Started
 
@@ -137,18 +134,3 @@ formula_result = vision_processor.extract_formulas(page_image)
    
    result = convert_pdf_to_markdown("your_document.pdf")
    ```
-
-## Next Steps
-
-### Potential Enhancements
-- **Concurrent Processing**: Parallel page processing
-- **Model Ensemble**: Multiple models for different content types
-- **OCR Integration**: Fallback for scanned documents
-- **Web Interface**: GUI for non-technical users
-- **Cloud Integration**: Support for cloud-hosted Ollama
-
-### Performance Optimizations
-- **Caching**: Cache vision model results
-- **Streaming**: Process pages as they're ready
-- **Preprocessing**: Optimize images before vision processing
-
